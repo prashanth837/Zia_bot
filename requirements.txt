@@ -1,4 +1,4 @@
-numpy
+
 faiss-cpu==1.7.4
 gspread
 google-auth
@@ -8,3 +8,4 @@ aiohttp
 python-telegram-bot
 flask
 python-dotenv
+numpy==1.26.4
