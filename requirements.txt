@@ -1,5 +1,5 @@
 numpy
-faiss-cpu
+faiss-cpu==1.7.4
 gspread
 google-auth
 sentence-transformers
@@ -7,3 +7,4 @@ google-generativeai
 aiohttp
 python-telegram-bot
 flask
+python-dotenv
