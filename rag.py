@@ -8,6 +8,7 @@ import google.generativeai as genai
 import aiohttp
 from io import BytesIO
 from dotenv import load_dotenv
+import threading
 
 from telegram import Update
 from telegram.ext import MessageHandler, filters, ContextTypes, ApplicationBuilder
@@ -199,9 +200,27 @@ User: {text}
 # =============================
 # 🤖 START BOT (RENDER POLLING)
 # =============================
-app = ApplicationBuilder().token(BOT_TOKEN).build()
-app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle))
+from flask import Flask
+import threading
+
+# Flask app (required for Render Web Service)
+app_flask = Flask(__name__)
+
+@app_flask.route("/")
+def home():
+    return "Bot is running"
+
+def run_flask():
+    port = int(os.environ.get("PORT", 10000))
+    app_flask.run(host="0.0.0.0", port=port)
+
+def run_bot():
+    app = ApplicationBuilder().token(BOT_TOKEN).build()
+    app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle))
+
+    print("Bot running...")
+    app.run_polling()
 
 if __name__ == "__main__":
-    print("Bot running on Render...")
-    app.run_polling()
+    threading.Thread(target=run_bot).start()
+    run_flask()
