@@ -17,7 +17,7 @@ from telegram.ext import MessageHandler, filters, ContextTypes
 # =============================
 load_dotenv()
 
-BOT_TOKEN = "YOUR_TOKEN_HERE"  # keep as is if you want
+BOT_TOKEN = "8325420074:AAGpeRZYsKy1vhmDtnkh18KounPNj0wS-tQ"  # keep as is if you want
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 
 if not GEMINI_API_KEY:
@@ -129,7 +129,7 @@ def retrieve(query):
 # SEND PDF
 # =============================
 async def send_pdf(update, name, url):
-    await update.message.reply_text("📄 Sending file...")
+    await update.message.reply_text(" 📎Fetching pdf...")
 
     async with aiohttp.ClientSession() as session:
         async with session.get(url) as resp:
