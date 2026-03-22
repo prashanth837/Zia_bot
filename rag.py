@@ -34,6 +34,7 @@ PDF_SHEET_ID = "1ME1I3OyFS9VYH2qeqHA5Elt9_f0XXNkkmDgyreVLylo"
 # 🧠 MEMORY
 # =============================
 USER_MEMORY = {}
+BOT_READY = False
 
 # =============================
 # 📊 GOOGLE SHEETS
@@ -74,34 +75,39 @@ def load_data():
 
     return texts, answers
 
-texts, answers = load_data()
-
 # =============================
-# EMBEDDINGS
+# INITIALIZE BOT (FIXED)
 # =============================
-embed_model = SentenceTransformer('all-MiniLM-L6-v2')
+def initialize_bot():
+    global texts, answers, embed_model, index, pdf_index, pdf_meta, BOT_READY
 
-embeddings = embed_model.encode(texts)
-index = faiss.IndexFlatL2(embeddings.shape[1])
-index.add(np.array(embeddings))
+    print("Loading models...")
 
-# =============================
-# PDF VECTOR DB
-# =============================
-pdf_texts, pdf_meta = [], []
+    texts, answers = load_data()
 
-for row in pdf_sheet.get_all_records():
-    k = str(row.get("keyword", ""))
-    name = str(row.get("file_name", ""))
-    url = str(row.get("file_url", ""))
+    embed_model = SentenceTransformer('all-MiniLM-L6-v2')
 
-    if k and url:
-        pdf_texts.append(k)
-        pdf_meta.append((name, url))
+    embeddings = embed_model.encode(texts)
+    index = faiss.IndexFlatL2(embeddings.shape[1])
+    index.add(np.array(embeddings))
 
-pdf_embeddings = embed_model.encode(pdf_texts)
-pdf_index = faiss.IndexFlatL2(pdf_embeddings.shape[1])
-pdf_index.add(np.array(pdf_embeddings))
+    pdf_texts, pdf_meta = [], []
+
+    for row in pdf_sheet.get_all_records():
+        k = str(row.get("keyword", ""))
+        name = str(row.get("file_name", ""))
+        url = str(row.get("file_url", ""))
+
+        if k and url:
+            pdf_texts.append(k)
+            pdf_meta.append((name, url))
+
+    pdf_embeddings = embed_model.encode(pdf_texts)
+    pdf_index = faiss.IndexFlatL2(pdf_embeddings.shape[1])
+    pdf_index.add(np.array(pdf_embeddings))
+
+    BOT_READY = True
+    print("Bot ready!")
 
 # =============================
 # SEARCH
@@ -139,6 +145,11 @@ async def send_pdf(update, name, url):
 async def handle(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     if not update.message or not update.message.text:
+        return
+
+    # 🔥 WAIT UNTIL BOT READY
+    if not BOT_READY:
+        await update.message.reply_text("⏳ Bot is starting, please wait...")
         return
 
     user_id = update.message.from_user.id
@@ -198,23 +209,22 @@ User: {text}
     await update.message.reply_text(answer)
 
 # =============================
-# 🤖 START BOT (RENDER POLLING)
+# 🌐 FLASK (FOR RENDER PORT)
 # =============================
 from flask import Flask
-import threading
 
-# Flask app (required for Render Web Service)
 app_flask = Flask(__name__)
 
 @app_flask.route("/")
 def home():
     return "Bot is running"
 
-def run_flask():
-    port = int(os.environ.get("PORT", 10000))
-    app_flask.run(host="0.0.0.0", port=port)
-
+# =============================
+# START BOT + SERVER
+# =============================
 def run_bot():
+    initialize_bot()  # load AFTER Flask starts
+
     app = ApplicationBuilder().token(BOT_TOKEN).build()
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle))
 
@@ -222,5 +232,11 @@ def run_bot():
     app.run_polling()
 
 if __name__ == "__main__":
+    # Start bot in background
     threading.Thread(target=run_bot).start()
-    run_flask()
+
+    # START FLASK IMMEDIATELY
+    port = int(os.environ.get("PORT", 10000))
+    print(f"Starting Flask on port {port}")
+
+    app_flask.run(host="0.0.0.0", port=port)
