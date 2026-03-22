@@ -1,0 +1,9 @@
+numpy
+faiss-cpu
+gspread
+google-auth
+sentence-transformers
+google-generativeai
+aiohttp
+python-telegram-bot
+flask
