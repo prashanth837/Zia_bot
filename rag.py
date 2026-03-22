@@ -235,12 +235,8 @@ if __name__ == "__main__":
     port = int(os.environ.get("PORT", 10000))
     print(f"Starting Flask on port {port}")
 
-    # Start bot AFTER small delay (important)
-    def delayed_bot():
-        import time
-        time.sleep(2)   # give Flask time to bind port
-        run_bot()
+    # Start Telegram bot in background thread
+    threading.Thread(target=run_bot, daemon=True).start()
 
-    threading.Thread(target=delayed_bot).start()
-
+    # Start Flask (this MUST be main thread)
     app_flask.run(host="0.0.0.0", port=port)
