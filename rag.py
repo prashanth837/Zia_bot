@@ -17,7 +17,7 @@ from telegram.ext import MessageHandler, filters, ContextTypes, ApplicationBuild
 # =============================
 load_dotenv()
 
-BOT_TOKEN = "8325420074:AAGpeRZYsKy1vhmDtnkh18KounPNj0wS-tQ"  # kept as you said
+BOT_TOKEN = "8325420074:AAGpeRZYsKy1vhmDtnkh18KounPNj0wS-tQ"  # unchanged
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 
 if not GEMINI_API_KEY:
@@ -39,23 +39,15 @@ USER_MEMORY = {}
 # =============================
 import json
 
-if os.getenv("GOOGLE_CREDENTIALS_JSON"):
-    creds_info = json.loads(os.environ["GOOGLE_CREDENTIALS_JSON"])
-    creds = Credentials.from_service_account_info(
-        creds_info,
-        scopes=[
-            "https://www.googleapis.com/auth/spreadsheets",
-            "https://www.googleapis.com/auth/drive.readonly"
-        ]
-    )
-else:
-    creds = Credentials.from_service_account_file(
-        "credentials.json",
-        scopes=[
-            "https://www.googleapis.com/auth/spreadsheets",
-            "https://www.googleapis.com/auth/drive.readonly"
-        ]
-    )
+creds_info = json.loads(os.getenv("GOOGLE_CREDENTIALS_JSON"))
+
+creds = Credentials.from_service_account_info(
+    creds_info,
+    scopes=[
+        "https://www.googleapis.com/auth/spreadsheets",
+        "https://www.googleapis.com/auth/drive.readonly"
+    ]
+)
 
 client = gspread.authorize(creds)
 
@@ -156,7 +148,7 @@ async def handle(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     USER_MEMORY[user_id].append(f"User: {text}")
 
-    # PDF
+    # PDF search
     name, url = search_pdf(text)
     if url:
         await send_pdf(update, name, url)
@@ -171,7 +163,6 @@ async def handle(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
         try:
             model = genai.GenerativeModel(MODEL_NAME)
-
             prompt = f"""
 Answer ONLY using this information:
 
@@ -179,10 +170,8 @@ Answer ONLY using this information:
 
 Question: {text}
 """
-
             res = model.generate_content(prompt)
             answer = res.text.strip()
-
         except:
             answer = filtered[0]
 
@@ -191,7 +180,6 @@ Question: {text}
 
         try:
             model = genai.GenerativeModel(MODEL_NAME)
-
             prompt = f"""
 Continue conversation:
 
@@ -199,10 +187,8 @@ Continue conversation:
 
 User: {text}
 """
-
             res = model.generate_content(prompt)
             answer = res.text.strip()
-
         except:
             answer = "⚠ AI busy, try later."
 
@@ -211,12 +197,11 @@ User: {text}
     await update.message.reply_text(answer)
 
 # =============================
-# 🤖 START BOT (POLLING)
+# 🤖 START BOT (RENDER POLLING)
 # =============================
 app = ApplicationBuilder().token(BOT_TOKEN).build()
-
 app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle))
 
 if __name__ == "__main__":
-    print("Bot running on Replit...")
+    print("Bot running on Render...")
     app.run_polling()
