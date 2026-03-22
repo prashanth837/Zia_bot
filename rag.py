@@ -10,14 +10,14 @@ from io import BytesIO
 from dotenv import load_dotenv
 
 from telegram import Update
-from telegram.ext import MessageHandler, filters, ContextTypes
+from telegram.ext import MessageHandler, filters, ContextTypes, ApplicationBuilder
 
 # =============================
 # 🔐 LOAD ENV
 # =============================
 load_dotenv()
 
-BOT_TOKEN = "8325420074:AAGpeRZYsKy1vhmDtnkh18KounPNj0wS-tQ"  # keep as is if you want
+BOT_TOKEN = "8325420074:AAGpeRZYsKy1vhmDtnkh18KounPNj0wS-tQ"  # kept as you said
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 
 if not GEMINI_API_KEY:
@@ -129,7 +129,7 @@ def retrieve(query):
 # SEND PDF
 # =============================
 async def send_pdf(update, name, url):
-    await update.message.reply_text(" 📎Fetching pdf...")
+    await update.message.reply_text("📎 Fetching pdf...")
 
     async with aiohttp.ClientSession() as session:
         async with session.get(url) as resp:
@@ -173,12 +173,12 @@ async def handle(update: Update, context: ContextTypes.DEFAULT_TYPE):
             model = genai.GenerativeModel(MODEL_NAME)
 
             prompt = f"""
-            Answer ONLY using this information with a polished tone:
+Answer ONLY using this information:
 
-            {context_text}
+{context_text}
 
-            Question: {text}
-            """
+Question: {text}
+"""
 
             res = model.generate_content(prompt)
             answer = res.text.strip()
@@ -193,12 +193,12 @@ async def handle(update: Update, context: ContextTypes.DEFAULT_TYPE):
             model = genai.GenerativeModel(MODEL_NAME)
 
             prompt = f"""
-            Continue conversation.
+Continue conversation:
 
-            {history}
+{history}
 
-            User: {text}
-            """
+User: {text}
+"""
 
             res = model.generate_content(prompt)
             answer = res.text.strip()
@@ -211,33 +211,12 @@ async def handle(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(answer)
 
 # =============================
-# FLASK WEBHOOK (RAILWAY)
+# 🤖 START BOT (POLLING)
 # =============================
-from flask import Flask, request
-import asyncio
-from telegram import Bot, Update
+app = ApplicationBuilder().token(BOT_TOKEN).build()
 
-app_flask = Flask(__name__)
-bot = Bot(BOT_TOKEN)
+app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle))
 
-loop = asyncio.new_event_loop()
-asyncio.set_event_loop(loop)
-
-@app_flask.route("/", methods=["POST"])
-def webhook():
-    data = request.get_json()
-    update = Update.de_json(data, bot)
-
-    loop.run_until_complete(handle(update, None))
-    return "ok"
-
-@app_flask.route("/", methods=["GET"])
-def home():
-    return "Bot is running"
-
-# =============================
-# START SERVER
-# =============================
 if __name__ == "__main__":
-    port = int(os.environ.get("PORT", 8080))
-    app_flask.run(host="0.0.0.0", port=port)
+    print("Bot running on Replit...")
+    app.run_polling()
