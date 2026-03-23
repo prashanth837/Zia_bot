@@ -208,9 +208,8 @@ User: {text}
 
     await update.message.reply_text(answer)
 
-# =============================
-# 🌐 FLASK (FOR RENDER PORT)
-# =============================
+import os
+import threading
 from flask import Flask
 
 app_flask = Flask(__name__)
@@ -219,24 +218,21 @@ app_flask = Flask(__name__)
 def home():
     return "Bot is running"
 
-# =============================
-# START BOT + SERVER
-# =============================
 def run_bot():
-    initialize_bot()  # load AFTER Flask starts
-
-    app = ApplicationBuilder().token(BOT_TOKEN).build()
-    app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle))
-
-    print("Bot running...")
-    app.run_polling()
+    try:
+        initialize_bot()
+        app = ApplicationBuilder().token(BOT_TOKEN).build()
+        app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle))
+        print("Bot running...")
+        app.run_polling()
+    except Exception as e:
+        print(f"Bot error: {e}")
 
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 10000))
-    print(f"Starting Flask on port {port}")
-
-    # Start Telegram bot in background thread
+    
+    # Start the bot in the background
     threading.Thread(target=run_bot, daemon=True).start()
-
-    # Start Flask (this MUST be main thread)
+    
+    # Run Flask in the foreground immediately
     app_flask.run(host="0.0.0.0", port=port)
