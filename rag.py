@@ -219,20 +219,26 @@ def home():
     return "Bot is running"
 
 def run_bot():
-    try:
-        initialize_bot()
-        app = ApplicationBuilder().token(BOT_TOKEN).build()
-        app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle))
-        print("Bot running...")
-        app.run_polling()
-    except Exception as e:
-        print(f"Bot error: {e}")
+    print("Bot thread started")
+
+    # Delay heavy loading (IMPORTANT)
+    import time
+    time.sleep(5)
+
+    initialize_bot()
+
+    app = ApplicationBuilder().token(BOT_TOKEN).build()
+    app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle))
+
+    print("Bot running...")
+    app.run_polling()
 
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 10000))
-    
-    # Start the bot in the background
+    print(f"Starting Flask on port {port}")
+
+    # Start bot in background
     threading.Thread(target=run_bot, daemon=True).start()
-    
-    # Run Flask in the foreground immediately
+
+    # Start Flask immediately
     app_flask.run(host="0.0.0.0", port=port)
