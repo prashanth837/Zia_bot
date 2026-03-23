@@ -212,24 +212,44 @@ import os
 import threading
 from flask import Flask
 
-app = Flask(__name__)   # <-- must be named 'app' and at module level
+import os
+import threading
+from flask import Flask
+
+app = Flask(__name__)
 
 @app.route("/")
 def home():
-    return "Bot is running"
+    return {"status": "running", "bot_ready": BOT_READY}
 
-def run_bot():
-    print("Bot thread started")
-    import time
-    time.sleep(5)
-    initialize_bot()
-    app_telegram = ApplicationBuilder().token(BOT_TOKEN).build()
-    app_telegram.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle))
-    print("Bot running...")
-    app_telegram.run_polling()
+@app.route("/health")
+def health():
+    return "OK"  # Ultra-fast health check
+
+# CRITICAL: Start bot WITHOUT blocking Flask startup
+def start_bot_background():
+    def run_bot():
+        print("🤖 Bot thread started")
+        import time
+        time.sleep(3)  # Reduced
+        try:
+            initialize_bot()
+        except Exception as e:
+            print(f"❌ Bot init failed: {e}")
+        print("✅ Bot polling started")
+        app_telegram = ApplicationBuilder().token(BOT_TOKEN).build()
+        app_telegram.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle))
+        app_telegram.run_polling()
+    
+    # Start bot AFTER Flask is running
+    threading.Thread(target=run_bot, daemon=True).start()
+    print("🚀 Flask ready, bot starting in background")
+
+# Auto-start bot when imported by Gunicorn
+start_bot_background()
 
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 10000))
-    print(f"Starting on port {port}")
-    threading.Thread(target=run_bot, daemon=True).start()
+    print(f"Starting Flask directly on port {port}")
+    start_bot_background()
     app.run(host="0.0.0.0", port=port)
