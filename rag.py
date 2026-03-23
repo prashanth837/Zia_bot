@@ -212,33 +212,24 @@ import os
 import threading
 from flask import Flask
 
-app_flask = Flask(__name__)
+app = Flask(__name__)   # <-- must be named 'app' and at module level
 
-@app_flask.route("/")
+@app.route("/")
 def home():
     return "Bot is running"
 
 def run_bot():
     print("Bot thread started")
-
-    # Delay heavy loading (IMPORTANT)
     import time
     time.sleep(5)
-
     initialize_bot()
-
-    app = ApplicationBuilder().token(BOT_TOKEN).build()
-    app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle))
-
+    app_telegram = ApplicationBuilder().token(BOT_TOKEN).build()
+    app_telegram.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle))
     print("Bot running...")
-    app.run_polling()
+    app_telegram.run_polling()
 
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 10000))
-    print(f"Starting Flask on port {port}")
-
-    # Start bot in background
+    print(f"Starting on port {port}")
     threading.Thread(target=run_bot, daemon=True).start()
-
-    # Start Flask immediately
-    app_flask.run(host="0.0.0.0", port=port)
+    app.run(host="0.0.0.0", port=port)
